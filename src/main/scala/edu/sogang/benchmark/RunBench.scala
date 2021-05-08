@@ -1,7 +1,7 @@
 package edu.sogang.benchmark
 
 import com.databricks.spark.sql.perf.tpcds.{TPCDS, TPCDSTables}
-
+import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 
 import java.io.IOException
@@ -88,8 +88,8 @@ object RunBench {
 
     val usage =
       """
-    Usage: ./bin/spark-submit --class edu.sogang.benchmark.RunBench --jars SPARK_SQL_PERF_JAR_PATH JAR_PATH --config-filename config.properties
-    """
+      Usage: ./bin/spark-submit --class edu.sogang.benchmark.RunBench --jars SPARK_SQL_PERF_JAR_PATH JAR_PATH --config-filename config.properties
+      """
 
     val argList = args.toList
     type ArgMap = Map[Symbol, Any]
@@ -113,7 +113,7 @@ object RunBench {
     val parsedArgs = parseArgument(Map(), argList)
 
     val tpcdsQueryNames =
-      "q1,q2,q3,q4,q5,q6,q7,q8,q9,q10," +
+        "q1,q2,q3,q4,q5,q6,q7,q8,q9,q10," +
         "q11,q12,q13,q14a,q14b,q15,q16,q17,q18,q19," +
         "q20,q21,q22,q23a,q23b,q24a,q24b,q25,q26,q27," +
         "q28,q29,q30,q31,q32,q33,q34,q35,q36,q37," +
@@ -127,8 +127,67 @@ object RunBench {
 
     val queryNames = parsedArgs.getOrElse(Symbol("queryNames"), tpcdsQueryNames).toString.split(",").toSeq
 
+    val conf = new SparkConf()
+
+    conf.set("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
+    conf.set("spark.kryo.registrationRequired", "true")
+
+    conf.registerKryoClasses(
+      Array(
+        Class.forName("java.lang.invoke.SerializedLambda"),
+        Class.forName("scala.Enumeration$Val"),
+        Class.forName("scala.math.Ordering$$anon$1"),
+        Class.forName("scala.math.BigDecimal$RoundingMode$"),
+        Class.forName("scala.reflect.ClassTag$GenericClassTag"),
+        Class.forName("org.apache.spark.sql.types.Metadata"),
+        Class.forName("org.apache.spark.sql.types.ByteType$"),
+        Class.forName("org.apache.spark.sql.types.DateType$"),
+        Class.forName("org.apache.spark.sql.types.DecimalType"),
+        Class.forName("org.apache.spark.sql.types.DoubleType$"),
+        Class.forName("org.apache.spark.sql.types.LongType$"),
+        Class.forName("org.apache.spark.sql.types.IntegerType$"),
+        Class.forName("org.apache.spark.sql.types.StringType$"),
+        Class.forName("org.apache.spark.sql.types.StructType"),
+        Class.forName("org.apache.spark.sql.types.StructField"),
+        Class.forName("[Lorg.apache.spark.sql.types.StructType;"),
+        Class.forName("[Lorg.apache.spark.sql.types.StructField;"),
+        Class.forName("org.apache.spark.sql.catalyst.InternalRow"),
+        Class.forName("[Lorg.apache.spark.sql.catalyst.InternalRow;"),
+        Class.forName("org.apache.spark.sql.execution.joins.LongHashedRelation"),
+        Class.forName("org.apache.spark.sql.execution.joins.LongToUnsafeRowMap"),
+        Class.forName("org.apache.spark.sql.types.Decimal$DecimalIsFractional$"),
+        Class.forName("org.apache.spark.sql.types.Decimal$DecimalAsIfIntegral$"),
+        Class.forName("org.apache.spark.sql.execution.command.PartitionStatistics"),
+        Class.forName("org.apache.spark.util.HadoopFSUtils$SerializableFileStatus"),
+        Class.forName("org.apache.spark.util.HadoopFSUtils$SerializableBlockLocation"),
+        Class.forName("[Lorg.apache.spark.util.HadoopFSUtils$SerializableBlockLocation;"),
+        Class.forName("org.apache.spark.sql.execution.datasources.WriteTaskResult"),
+        Class.forName("org.apache.spark.sql.execution.datasources.BasicWriteTaskStats"),
+        Class.forName("org.apache.spark.sql.execution.datasources.ExecutedWriteSummary"),
+        Class.forName("org.apache.spark.sql.catalyst.trees.Origin"),
+        Class.forName("org.apache.spark.sql.catalyst.InternalRow$"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.Add"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.Literal"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.Cast"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.Round"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.Divide"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.EqualTo"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.Ascending$"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.CaseWhen"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.Coalesce"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.Descending$"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.NullsFirst$"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.NullsLast$"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.SortOrder"),
+        Class.forName("[Lorg.apache.spark.sql.catalyst.expressions.SortOrder;"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.BoundReference"),
+        Class.forName("org.apache.spark.sql.catalyst.expressions.codegen.LazilyGeneratedOrdering"),
+      )
+    )
+
     val ss = SparkSession.builder
-      //      .master("local[*]")
+      .config(conf)
+//      .master("local[*]")
       .getOrCreate()
 
     val sc = ss.sparkContext
@@ -141,34 +200,6 @@ object RunBench {
       ss.stop()
     }
 
-    //    val parser = new scopt.OptionParser[RunConfig]("spark-sql-perf") {
-    //      head("spark-sql-perf", "0.2.0")
-    //      opt[String]('m', "master")
-    //        .action { (x, c) => c.copy(master = x) }
-    //        .text("the Spark master to use, default to local[*]")
-    //      opt[String]('b', "benchmark")
-    //        .action { (x, c) => c.copy(benchmarkName = x) }
-    //        .text("the name of the benchmark to run")
-    //        .required()
-    //      opt[String]('f', "filter")
-    //        .action((x, c) => c.copy(filter = Some(x)))
-    //        .text("a filter on the name of the queries to run")
-    //      opt[Int]('i', "iterations")
-    //        .action((x, c) => c.copy(iterations = x))
-    //        .text("the number of iterations to run")
-    //      opt[Long]('c', "compare")
-    //          .action((x, c) => c.copy(baseline = Some(x)))
-    //          .text("the timestamp of the baseline experiment to compare with")
-    //      help("help")
-    //        .text("prints this usage text")
-    //    }
-    //
-    //    parser.parse(args, RunConfig()) match {
-    //      case Some(config) =>
-    //        run(config)
-    //      case None =>
-    //        System.exit(1)
-    //    }
   }
 
 }
