@@ -190,9 +190,6 @@ object RunBench {
 //      .master("local[*]")
       .getOrCreate()
 
-    val sc = ss.sparkContext
-    sc.setLogLevel("WARN")
-
     try {
       runExperiment(parsedArgs(Symbol("confFileName")).toString, queryNames, ss)
     }
